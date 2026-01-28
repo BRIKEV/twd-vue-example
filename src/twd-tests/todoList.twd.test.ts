@@ -106,8 +106,8 @@ describe("Todo List Page", () => {
     // Find the delete button for the first todo (Learn TWD)
     // Since there are multiple delete buttons, we'll get all and use the first one
     // which corresponds to the first todo item
-    const deleteButtons = await screenDom.getAllByRole("button", { name: "Delete" });
-    const deleteButton = deleteButtons[0];
+    const deleteButtons = await screenDom.findAllByRole("button", { name: "Delete" });
+    const deleteButton = deleteButtons[0] as HTMLElement;
     
     await twd.mockRequest("getTodoList", {
       method: "GET",
@@ -120,8 +120,8 @@ describe("Todo List Page", () => {
     await twd.waitForRequest("deleteTodo");
     await twd.waitForRequest("getTodoList");
     
-    const todoList = await screenDom.getAllByText(/Learn TWD|Build Todo App/);
+    const todoList = await screenDom.findAllByText(/Learn TWD|Build Todo App/);
     expect(todoList).to.have.length(1);
-    twd.should(todoList[0], "be.visible");
+    twd.should(todoList[0] as HTMLElement, "be.visible");
   });
 });
