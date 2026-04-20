@@ -32,7 +32,7 @@
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.18",
     "twd-js": "^1.7.1",
-    "twd-relay": "^1.0.0",
+    "twd-relay": "^1.1.0",
     "typescript": "~5.9.3",
     "vite": "^7.3.1",
     "vite-plugin-vue-devtools": "^8.0.5",
