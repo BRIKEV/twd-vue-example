@@ -4,6 +4,7 @@ import { defineConfig, PluginOption } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 import { twdRemote } from 'twd-relay/vite';
+import { twd } from 'twd-js/vite-plugin';
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -11,6 +12,9 @@ export default defineConfig({
     vue(),
     vueDevTools(),
     tailwindcss(),
+    twd({
+      testFilePattern: '/**/*.twd.test.ts',
+    }),
     twdRemote() as PluginOption,
   ],
   resolve: {
