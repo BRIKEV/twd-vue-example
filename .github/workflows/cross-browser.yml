@@ -1,0 +1,40 @@
+name: Cross-browser - twd-runner
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  cross-browser:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # twd-runner is not published to npm yet, so install it from GitHub so that
+      # `npx twd-runner` (and its Playwright dependency) resolve. Once twd-runner
+      # is published, drop this step and add it to devDependencies instead.
+      - name: Install twd-runner (from GitHub, pre-publish)
+        run: npm install --no-save github:BRIKEV/twd-runner
+
+      - name: Start Vite dev server
+        run: |
+          nohup npm run dev > vite.log 2>&1 &
+          npx wait-on http://localhost:5173
+        env:
+          CI: true
+
+      - name: Run TWD tests across browsers
+        uses: BRIKEV/twd-runner/.github/actions/run@main
