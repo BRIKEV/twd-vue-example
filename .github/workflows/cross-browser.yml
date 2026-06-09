@@ -23,12 +23,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # twd-runner is not published to npm yet, so install it from GitHub so that
-      # `npx twd-runner` (and its Playwright dependency) resolve. Once twd-runner
-      # is published, drop this step and add it to devDependencies instead.
-      - name: Install twd-runner (from GitHub, pre-publish)
-        run: npm install --no-save github:BRIKEV/twd-runner
-
       - name: Start Vite dev server
         run: |
           nohup npm run dev > vite.log 2>&1 &
