@@ -84,7 +84,10 @@ describe("Todo List Page", () => {
       date: "2024-12-20",
     });
 
-    const todoList = await screenDom.getAllByText(/Learn TWD|Build Todo App|Test Todo/);
+    // findAllByText (async, retries) not getAllByText (sync): the list re-renders
+    // a tick after the post-create getTodoList response resolves, so a synchronous
+    // query can run before the DOM updates and flake.
+    const todoList = await screenDom.findAllByText(/Learn TWD|Build Todo App|Test Todo/);
     expect(todoList).to.have.length(1);
   });
 

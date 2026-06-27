@@ -1,5 +1,6 @@
 {
   "url": "http://localhost:5173",
+  "browsers": ["firefox", "webkit"],
   "waitForServiceWorker": true,
   "timeout": 60000,
   "contractReportPath": ".twd/contract-report.md",

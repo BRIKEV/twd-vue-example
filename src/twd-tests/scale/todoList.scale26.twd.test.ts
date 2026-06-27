@@ -86,7 +86,7 @@ describe("Todo List Page [scale 26]", () => {
       date: "2024-12-20",
     });
 
-    const todoList = await screenDom.getAllByText(/Learn TWD|Build Todo App|Test Todo/);
+    const todoList = await screenDom.findAllByText(/Learn TWD|Build Todo App|Test Todo/);
     expect(todoList).to.have.length(1);
   });
 

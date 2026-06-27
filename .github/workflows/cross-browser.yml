@@ -10,13 +10,14 @@ jobs:
   cross-browser:
     runs-on: ubuntu-latest
 
-    # Run each engine in its own job on a fresh runner: full CPU/RAM per browser
-    # (no cross-engine contention) and the three jobs run in parallel, so
-    # wall-clock ~= the slowest single browser instead of the sum.
+    # Firefox + WebKit only: Chromium is already covered by twd-cli (Puppeteer)
+    # in ci.yml, so twd-runner handles the engines Puppeteer can't reach. Each
+    # engine runs in its own job on a fresh runner (full CPU/RAM, no contention),
+    # in parallel, so wall-clock ~= the slower of the two.
     strategy:
       fail-fast: false
       matrix:
-        browser: [chromium, firefox, webkit]
+        browser: [firefox, webkit]
 
     steps:
       - name: Checkout repository
