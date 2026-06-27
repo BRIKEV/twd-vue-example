@@ -1,7 +1,6 @@
 {
   "url": "http://localhost:5173",
   "waitForServiceWorker": true,
-  "concurrency": 1,
   "timeout": 60000,
   "contractReportPath": ".twd/contract-report.md",
   "contracts": [
