@@ -1,5 +1,6 @@
 {
   "url": "http://localhost:5173",
+  "waitForServiceWorker": true,
   "contractReportPath": ".twd/contract-report.md",
   "contracts": [
     {
