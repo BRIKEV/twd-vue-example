@@ -38,6 +38,15 @@ jobs:
           mv "$tmp" twd.config.json
           cat twd.config.json
 
+      # Pre-bundle deps so the dev server is already "warm" before the test
+      # browser loads. A cold Vite server runs optimizeDeps on first load and
+      # forces a full-page reload, which disrupts SW registration — Chromium
+      # tolerates it, Firefox/WebKit lose the race. In a single sequential run
+      # Chromium accidentally warms the shared server for the others; each
+      # parallel job has its own cold server, so warm it explicitly here.
+      - name: Warm up Vite (pre-bundle deps)
+        run: npx vite optimize --force
+
       - name: Start Vite dev server
         run: |
           nohup npm run dev > vite.log 2>&1 &
