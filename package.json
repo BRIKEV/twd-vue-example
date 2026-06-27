@@ -33,6 +33,7 @@
     "tailwindcss": "^4.1.18",
     "twd-js": "1.8.1",
     "twd-relay": "1.2.3",
+    "twd-runner": "0.1.1",
     "typescript": "~5.9.3",
     "vite": "^7.3.1",
     "vite-plugin-vue-devtools": "^8.0.5",
