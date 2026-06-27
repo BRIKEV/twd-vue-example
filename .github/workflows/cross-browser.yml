@@ -45,17 +45,8 @@ jobs:
         env:
           CI: true
 
-      # Chromium for the warm-up only (the test engine is installed by the run
-      # action). Loading the page once compiles the full module graph, runs
-      # optimizeDeps, and activates the SW — so the matrix engine starts against
-      # a fully warm server. This is what an all-browsers sequential run gets for
-      # free (Chromium goes first); each parallel job needs it done explicitly,
-      # otherwise Firefox/WebKit time out claiming the SW on a cold server.
-      - name: Install Chromium for warm-up
-        run: npx playwright install chromium
-
-      - name: Warm up dev server (full page load + SW)
-        run: node .github/scripts/warmup.mjs
-
+      # No warm-up step here: twd-runner warms the dev server itself when
+      # waitForServiceWorker is enabled (twd.config.json), so each parallel job
+      # starts against a hot server with no extra CI plumbing.
       - name: Run TWD tests (${{ matrix.browser }})
         uses: BRIKEV/twd-runner/.github/actions/run@main
