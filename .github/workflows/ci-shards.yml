@@ -1,0 +1,122 @@
+# Sharded TWD run against the twd-cli beta.
+#
+# Kept separate from ci.yml so the existing single-job run stays untouched and
+# this experiment is easy to delete. twd-cli is installed with --no-save, so
+# neither package.json nor package-lock.json is modified and `npm ci` keeps
+# working against the committed lockfile.
+name: CI - twd shards (beta)
+
+on:
+  push:
+    branches: [ feat/twd-shards ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  TWD_CLI_BETA: github:BRIKEV/twd-cli#58a6096
+
+jobs:
+  shards:
+    runs-on: ubuntu-latest
+
+    strategy:
+      # Without this the first red shard cancels its siblings, and the merge job
+      # sees gaps it cannot tell apart from a shard that crashed.
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install twd-cli beta
+        run: npm i --no-save ${{ env.TWD_CLI_BETA }}
+
+      - name: Cache Puppeteer browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/puppeteer
+          key: ${{ runner.os }}-puppeteer-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-puppeteer-
+
+      - name: Install Chrome for Puppeteer
+        run: npx puppeteer browsers install chrome
+
+      - name: Start Vite dev server
+        run: |
+          nohup npm run dev > vite.log 2>&1 &
+          npx wait-on http://localhost:5173
+        env:
+          CI: true
+
+      - name: Run TWD tests for this shard
+        run: npx twd-cli run --shard ${{ matrix.shard }}/2
+
+      - name: Upload shard report
+        # Always: a red shard must still upload, or merge cannot tell "this
+        # shard failed" from "this shard never ran".
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: twd-run-${{ matrix.shard }}
+          path: .twd/run
+          if-no-files-found: error
+
+  merge:
+    runs-on: ubuntu-latest
+    needs: [shards]
+    # Runs even though a shard job may have exited 1. Without this a red shard
+    # short-circuits the workflow and the merged summary never prints.
+    if: ${{ !cancelled() }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install twd-cli beta
+        # No browser needed to merge, so skip Puppeteer's Chrome download.
+        run: npm i --no-save ${{ env.TWD_CLI_BETA }}
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+
+      - name: Download shard reports
+        uses: actions/download-artifact@v4
+        with:
+          pattern: twd-run-*
+          path: .twd/shards
+
+      - name: Merge shard reports
+        # Owns the final exit code: non-zero if any test failed in any shard, or
+        # a contract violation in error mode, or a shard report is missing.
+        run: npx twd-cli merge .twd/shards
+
+      - name: Upload merged report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: twd-merged
+          path: |
+            .twd/merged-run.json
+            .twd/contract-report.md
+          if-no-files-found: warn
