@@ -11,6 +11,7 @@
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
     "build-only": "vite build",
+    "test": "vitest",
     "serve": "json-server --watch data/data.json --routes data/routes.json --port 3001",
     "serve:dev": "npm-run-all --parallel serve dev",
     "type-check": "vue-tsc --build"
@@ -22,11 +23,14 @@
     "vue-router": "^4.6.4"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/vue": "^8.1.0",
     "@tsconfig/node24": "^24.0.4",
     "@types/node": "^25.0.10",
     "@vitejs/plugin-vue": "^6.0.3",
     "@vue/tsconfig": "^0.8.1",
     "autoprefixer": "^10.4.23",
+    "jsdom": "^29.1.1",
     "json-server": "^0.17.4",
     "npm-run-all": "^4.1.5",
     "postcss": "^8.5.6",
@@ -36,6 +40,7 @@
     "typescript": "~5.9.3",
     "vite": "^7.3.1",
     "vite-plugin-vue-devtools": "^8.0.5",
+    "vitest": "^4.1.11",
     "vue-tsc": "^3.2.3"
   }
 }

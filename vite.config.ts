@@ -5,6 +5,7 @@ import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 import { twdRemote } from 'twd-relay/vite';
 import { twd } from 'twd-js/vite-plugin';
+import { configDefaults } from 'vitest/config';
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -21,6 +22,12 @@ export default defineConfig({
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
+  },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['./vitest.setup.ts'],
+    exclude: [...configDefaults.exclude, "**/*.twd.test.*"],
   },
   server: {
     watch: {
