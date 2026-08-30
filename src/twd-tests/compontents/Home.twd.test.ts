@@ -1,26 +1,29 @@
-import { afterEach, beforeEach, describe, it } from 'twd-js/runner'
-import { twd } from 'twd-js'
-import { render, cleanup } from '@testing-library/vue'
+import { afterEach, describe, it } from 'twd-js/runner'
+import { twd, userEvent } from 'twd-js'
+import { render, screen, cleanup } from '@testing-library/vue'
 import HomeView from '../../views/HomeView.vue'
-import { componentHost, removeComponentHost } from '../support/componentHost'
+import { componentHost, restorePage } from '../support/componentHost'
 
-describe('Components', () => {
-  beforeEach(() => {
-    cleanup()
-    componentHost()
-  })
-
+describe('HomeView component', () => {
   afterEach(() => {
     cleanup()
-    removeComponentHost()
+    restorePage()
   })
 
-  it('should render', async () => {
-    // Queries come from render(), not `screen`: `screen` searches document.body,
-    // which still holds the running app, so it can match the app's own HomeView.
-    const { findByText } = render(HomeView, { container: componentHost() })
+  it('renders the title', async () => {
+    render(HomeView, { container: componentHost() })
 
-    const title = await findByText('Welcome to TWD')
+    const title = await screen.findByText('Welcome to TWD')
     twd.should(title, 'be.visible')
+  })
+
+  it('increments the counter on click', async () => {
+    render(HomeView, { container: componentHost() })
+
+    const button = await screen.findByTestId('counter-button')
+    twd.should(button, 'contain.text', 'Count is 0')
+
+    await userEvent.click(button)
+    twd.should(button, 'contain.text', 'Count is 1')
   })
 })
