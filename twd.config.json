@@ -21,6 +21,7 @@
     "fps": 30,
     "pace": 400,
     "postRoll": 800,
-    "hideSidebar": true
+    "hideSidebar": true,
+    "ffmpegPath": "./scripts/ffmpeg-log.sh"
   }
 }
