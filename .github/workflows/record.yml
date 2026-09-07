@@ -38,6 +38,8 @@ jobs:
         uses: actions/checkout@v5
         with:
           ref: ${{ github.event.pull_request.head.sha }}
+          # merge-base needs real history; a depth-1 checkout has no base commit.
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v5
@@ -48,18 +50,34 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Verified rather than assumed, and the version is logged. When recording
-      # fails inside twd-cli the ffmpeg stderr is currently swallowed, so the build
-      # in use is the one fact worth having in the log.
-      - name: Install and verify ffmpeg
+      # A STATIC ffmpeg, not Ubuntu's. Diagnosed 2026-09-07: Puppeteer 25.10 passes
+      # `-movflags hybrid_fragmented`, which does not exist before ffmpeg 7, and
+      # ubuntu-24.04 ships 6.1.1. The mp4 muxer then fails to write its header,
+      # ffmpeg exits 630ms in, and twd-cli writes to the dead stream forever.
+      # See BRIKEV/twd-cli docs/bug-record-ffmpeg-hang.md.
+      - name: Install a modern ffmpeg
         run: |
           set -e
-          command -v ffmpeg >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y ffmpeg; }
+          mkdir -p "$RUNNER_TEMP/ffmpeg"
+          curl -fsSL https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz \
+            | tar -xJ --strip-components=1 -C "$RUNNER_TEMP/ffmpeg"
+          echo "$RUNNER_TEMP/ffmpeg" >> "$GITHUB_PATH"
+
+      # The CAPABILITY, not the version number: the flags come from Puppeteer and
+      # move independently of ffmpeg's numbering, so assert the thing actually
+      # required. Fails here, with a readable message, instead of as a dead stream
+      # mid-run.
+      - name: Verify ffmpeg can do what recording needs
+        run: |
+          set -e
           command -v ffmpeg
           ffmpeg -version | head -1
+          ffmpeg -hide_banner -h muxer=mp4 | grep -q hybrid_fragmented \
+            || { echo "::error::this ffmpeg has no -movflags hybrid_fragmented; recording cannot work"; exit 1; }
+          echo "movflags hybrid_fragmented: ok"
           # The diagnostic wrapper twd.config.json points at. Exercised here so a
-          # broken exec bit or a bad shebang fails in this step, where the message
-          # is readable, rather than as a dead ffmpeg stream 600ms into a run.
+          # broken exec bit or shebang fails where the message is readable. It
+          # resolves `ffmpeg` from PATH, so it picks up the static build above.
           test -x ./scripts/ffmpeg-log.sh
           ./scripts/ffmpeg-log.sh -version >/dev/null
           echo "wrapper ok"
@@ -71,19 +89,46 @@ jobs:
         env:
           CI: true
 
+      # WHICH tests to record is a fact, so it is computed, not asked of a model:
+      # the `it()` titles this branch added under src/twd-tests. Recording the
+      # whole suite meant 10 tests at pace 400 for a reviewer who only wants to
+      # see what the PR built — and a wrong title cannot be invented, because
+      # twd-cli exits 1 with "No tests matched filter(s)".
+      - name: Which tests did this branch add?
+        id: titles
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          mkdir -p .twd-agent
+          node scripts/changed-test-titles.mjs "$BASE_SHA" > .twd-agent/titles.txt || true
+          COUNT=$(grep -c . .twd-agent/titles.txt || true)
+          echo "count=${COUNT:-0}" >> "$GITHUB_OUTPUT"
+          echo "found ${COUNT:-0} added test(s):"
+          sed 's/^/  - /' .twd-agent/titles.txt
+
       # `timeout` bounds the call from inside the step, so a hang exits non-zero
-      # with the log intact instead of being cancelled by the step timeout (which
-      # can take the output with it). twd-cli is pinned in package-lock.json, so
-      # `npx` resolves the local binary.
-      - name: Record the suite
+      # with the log intact rather than being cancelled by the step timeout, which
+      # can take the output with it. 2 minutes: the whole point of filtering is
+      # that three tests do not need six. twd-cli is pinned in package-lock.json,
+      # so `npx` resolves the local binary.
+      - name: Record the added tests
         id: record
+        if: steps.titles.outputs.count != '0'
         continue-on-error: true
-        timeout-minutes: 8
+        timeout-minutes: 5
         run: |
           set -o pipefail
           mkdir -p .twd-agent
-          timeout --signal=INT 360 npx twd-cli run --record 2>&1 | tee .twd-agent/record.log || {
-            echo "::warning::recording failed or timed out (exit $?) — see the uploaded log"
+          # One --test per title, which is how twd-cli takes several and how it
+          # produces a clip per test.
+          ARGS=()
+          while IFS= read -r title; do
+            [ -n "$title" ] && ARGS+=(--test "$title")
+          done < .twd-agent/titles.txt
+
+          timeout --signal=INT 120 npx twd-cli run --record "${ARGS[@]}" 2>&1 \
+            | tee .twd-agent/record.log || {
+            echo "::warning::recording failed or timed out (exit $?) — see the log below"
           }
           ls -la twd-artifacts/ 2>/dev/null || echo "no video produced"
 
@@ -124,7 +169,9 @@ jobs:
           VIDEO_URL: ${{ steps.video.outputs.artifact-url }}
           OUTCOME: ${{ steps.record.outcome }}
         run: |
-          if [ "$OUTCOME" = "success" ] && [ -n "$VIDEO_URL" ]; then
+          if [ "$OUTCOME" = "skipped" ]; then
+            gh pr comment "$PR_NUMBER" --body "Nothing to record: this branch added no TWD tests."
+          elif [ "$OUTCOME" = "success" ] && [ -n "$VIDEO_URL" ]; then
             gh pr comment "$PR_NUMBER" --body "Recording: [download the artifact](${VIDEO_URL}) and unzip to play the mp4."
           else
             gh pr comment "$PR_NUMBER" --body "Recording failed (\`${OUTCOME}\`). The ffmpeg log is in the [run artifact](${VIDEO_URL:-$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID})."
