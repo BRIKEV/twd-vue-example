@@ -58,6 +58,7 @@ Worked examples:
 | Spec was three screens of prose nobody read | `refine/SKILL.md` (the word budget) |
 | Spec came back with five questions instead of decisions | `refine/SKILL.md` (decide and disclose) |
 | Criteria were not observable, so the tests asserted nothing | `refine/SKILL.md` (the criteria format) |
+| Spec read like a UI ticket but rewrote the API contract | `refine/SKILL.md` (the `Touches` line) |
 | Died because the dev server never came up | `agent.yml` |
 
 ## The promotion workflow

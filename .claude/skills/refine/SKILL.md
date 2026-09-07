@@ -66,6 +66,17 @@ you scope. Ignore `.claude/twd-patterns.md`; TWD mechanics are the implementer's
 
 Reading code is for **grounding** the spec. It is not licence to prescribe.
 
+## Touches — the blast radius, in one line
+
+A reviewer needs to know how big this is before they approve it. A UI-sounding ticket that
+rewrites an API contract and invalidates every existing fixture must not read like a UI ticket.
+
+Name the **layers** that change, never the files: the page, the API contract, fixtures or seed
+data, routing, a shared behaviour. One line, 15 words or fewer, always present — "the page only"
+is useful information too.
+
+This is scope, not design. If you find yourself explaining an approach, delete it.
+
 ## Acceptance criteria are the contract
 
 This is the part that matters most. Each criterion becomes **one journey test**, so:
@@ -101,6 +112,8 @@ Then, omitting any section that would be empty:
 ```markdown
 **Goal** — one sentence, 25 words or fewer.
 
+**Touches** — the layers that change, one line, 15 words or fewer.
+
 **In scope**
 - up to 4 bullets, 12 words or fewer each
 
@@ -132,7 +145,9 @@ For a refusal, keep the marker, then the three lines. Nothing else.
 5. More than three journey tests means more than one issue. Say so instead of specifying it.
 6. Refuse in three lines when the issue cannot be specced.
 7. The first line of `.twd-agent/spec.md` is the marker, byte for byte.
-8. Never edit the issue description, `LEARNINGS.md`, or any source file. You write one file.
+8. **Touches** is always present, one line, layers not files. Say when a contract, fixtures
+   or seed data change — that is the line that stops a big change reading as a small one.
+9. Never edit the issue description, `LEARNINGS.md`, or any source file. You write one file.
 
 ## Red flags — you are rationalizing
 
@@ -145,5 +160,6 @@ For a refusal, keep the marker, then the three lines. Nothing else.
 | "'The data is handled correctly' is a criterion" | Not observable, so not testable. Rewrite it as something a user sees. |
 | "The page doesn't exist but I can infer the intent" | Refuse in three lines. Inferring a whole screen is not refinement. |
 | "I'll note the edge cases I'm unsure about, just in case" | Unasked-for caveats are the noise this skill exists to prevent. |
+| "Touches is where I explain the approach" | It names layers, not design. One line, then stop. |
 | "The discussion is long, I'll write a fresh spec" | Revise. Carry forward what nobody challenged; change only what the conversation changed. |
 | "They objected, but my choice was better" | An objection is a constraint now, not a choice reopened. |
