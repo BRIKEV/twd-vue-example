@@ -57,6 +57,12 @@ jobs:
           command -v ffmpeg >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y ffmpeg; }
           command -v ffmpeg
           ffmpeg -version | head -1
+          # The diagnostic wrapper twd.config.json points at. Exercised here so a
+          # broken exec bit or a bad shebang fails in this step, where the message
+          # is readable, rather than as a dead ffmpeg stream 600ms into a run.
+          test -x ./scripts/ffmpeg-log.sh
+          ./scripts/ffmpeg-log.sh -version >/dev/null
+          echo "wrapper ok"
 
       - name: Start Vite dev server
         run: |
@@ -81,7 +87,21 @@ jobs:
           }
           ls -la twd-artifacts/ 2>/dev/null || echo "no video produced"
 
-      - name: Upload the recording and the log
+      # Printed, not just uploaded: the whole point of the wrapper is to see WHY
+      # ffmpeg exited, and making that require downloading and unzipping an
+      # artifact is how a diagnostic goes unread.
+      - name: What ffmpeg actually said
+        if: always()
+        run: |
+          if [ -s .twd-agent/ffmpeg.log ]; then
+            echo "::group::ffmpeg argv and stderr"
+            cat .twd-agent/ffmpeg.log
+            echo "::endgroup::"
+          else
+            echo "::warning::no ffmpeg.log — the wrapper was never invoked, so twd-cli did not use record.ffmpegPath"
+          fi
+
+      - name: Upload the recording and the logs
         id: video
         if: always()
         continue-on-error: true
@@ -91,6 +111,7 @@ jobs:
           path: |
             twd-artifacts/
             .twd-agent/record.log
+            .twd-agent/ffmpeg.log
           if-no-files-found: warn
           retention-days: 14
 
