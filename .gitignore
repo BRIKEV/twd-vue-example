@@ -40,3 +40,9 @@ __screenshots__/
 
 # local Claude Code settings (the brain itself IS committed)
 .claude/settings.local.json
+
+# generated TWD contract report
+.twd/
+
+# TWD recordings (twd.dev/recording)
+twd-artifacts/

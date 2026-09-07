@@ -8,5 +8,19 @@
       "mode": "error",
       "strict": true
     }
-  ]
+  ],
+  "record": {
+    "enabled": false,
+    "dir": "./twd-artifacts",
+    "format": "mp4",
+    "viewport": {
+      "width": 1280,
+      "height": 800,
+      "deviceScaleFactor": 1
+    },
+    "fps": 30,
+    "pace": 400,
+    "postRoll": 800,
+    "hideSidebar": true
+  }
 }

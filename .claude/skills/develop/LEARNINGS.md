@@ -9,6 +9,10 @@ When `/develop` produces something wrong, do not patch the generated code and mo
 **Friction** section of the run report (`.twd-agent/run-report.md`, which becomes the PR body),
 find the piece of knowledge that was missing, and add it here as a rule. The next run reads it.
 
+**Not sure this is the right file?** [`README.md`](./README.md) routes a failure to the surface
+that owns it: the method (`SKILL.md`), this app (here), the TWD wiring (`twd-patterns.md`), or
+TWD itself (the plugin, upstream).
+
 - **Only humans edit this file.** The agent reports friction; you decide what becomes a rule.
 - **Write a rule, not a story.** One imperative line the agent can act on, plus one line of why.
 - **TWD mechanics belong in `.claude/twd-patterns.md`** — imports, `beforeEach`, visit paths,
