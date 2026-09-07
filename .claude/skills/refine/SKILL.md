@@ -1,7 +1,7 @@
 ---
 name: refine
 description: Use when turning a vague GitHub issue into a short, test-shaped spec before anyone builds it. Decides the open questions itself and asks the human to validate. Owns what and why, never how.
-argument-hint: <issue title + body>
+argument-hint: <issue title + body + the last comments>
 allowed-tools: Read, Write, Grep, Glob, Bash
 ---
 
@@ -12,6 +12,18 @@ into a spec small enough to read in one breath, whose acceptance criteria are al
 like tests, so whoever builds it translates rather than guesses.
 
 **Task:** $ARGUMENTS
+
+## The conversation is part of the requirement
+
+The issue body is the original ask. Comments that follow are humans correcting it, and **the
+latest human input outranks the body.** Treat an objection as a constraint from now on, not as a
+choice reopened.
+
+Your own earlier specs and refusals appear in that conversation too. **Revise, do not restart:**
+carry forward what nobody challenged, and change only what the discussion changed.
+
+If a previous refusal still holds, say so in one line and name what is still missing. Do not
+re-emit the same refusal in full — a human has already read it once.
 
 ## What you own
 
@@ -133,3 +145,5 @@ For a refusal, keep the marker, then the three lines. Nothing else.
 | "'The data is handled correctly' is a criterion" | Not observable, so not testable. Rewrite it as something a user sees. |
 | "The page doesn't exist but I can infer the intent" | Refuse in three lines. Inferring a whole screen is not refinement. |
 | "I'll note the edge cases I'm unsure about, just in case" | Unasked-for caveats are the noise this skill exists to prevent. |
+| "The discussion is long, I'll write a fresh spec" | Revise. Carry forward what nobody challenged; change only what the conversation changed. |
+| "They objected, but my choice was better" | An objection is a constraint now, not a choice reopened. |
