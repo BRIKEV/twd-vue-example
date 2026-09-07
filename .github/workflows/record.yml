@@ -1,0 +1,117 @@
+name: Agent - record a PR's tests
+
+# Label a PR `record` and this records the suite as video and links the artifact.
+#
+# Deliberately NOT part of agent.yml. Recording hung a whole agent run on
+# 2026-09-07: ffmpeg exited, twd-cli kept writing to the destroyed stream
+# ("ffmpeg failed to write: Cannot call write after a stream was destroyed") and
+# never gave up, so the job burned its 30 minutes and a finished implementation
+# was lost before it could be pushed. `continue-on-error` does not cover a hang.
+#
+# So recording lives here, after the work is already safe on a branch, where a
+# hang costs a video and nothing else. It doubles as the reproduction harness for
+# the twd-cli bug: `timeout` bounds the call, ffmpeg's version and stderr are
+# captured, and the log is uploaded whatever happens.
+on:
+  pull_request:
+    types: [labeled]
+
+concurrency:
+  group: record-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  record:
+    if: github.event.label.name == 'record'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write # comment the artifact link, drop the label
+    env:
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      # The PR's head, not the merge commit: the point is to see the tests this
+      # branch actually built.
+      - name: Checkout the PR head
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Verified rather than assumed, and the version is logged. When recording
+      # fails inside twd-cli the ffmpeg stderr is currently swallowed, so the build
+      # in use is the one fact worth having in the log.
+      - name: Install and verify ffmpeg
+        run: |
+          set -e
+          command -v ffmpeg >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y ffmpeg; }
+          command -v ffmpeg
+          ffmpeg -version | head -1
+
+      - name: Start Vite dev server
+        run: |
+          nohup npm run dev > vite.log 2>&1 &
+          npx wait-on http://localhost:5173
+        env:
+          CI: true
+
+      # `timeout` bounds the call from inside the step, so a hang exits non-zero
+      # with the log intact instead of being cancelled by the step timeout (which
+      # can take the output with it). twd-cli is pinned in package-lock.json, so
+      # `npx` resolves the local binary.
+      - name: Record the suite
+        id: record
+        continue-on-error: true
+        timeout-minutes: 8
+        run: |
+          set -o pipefail
+          mkdir -p .twd-agent
+          timeout --signal=INT 360 npx twd-cli run --record 2>&1 | tee .twd-agent/record.log || {
+            echo "::warning::recording failed or timed out (exit $?) — see the uploaded log"
+          }
+          ls -la twd-artifacts/ 2>/dev/null || echo "no video produced"
+
+      - name: Upload the recording and the log
+        id: video
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: twd-recording-pr-${{ github.event.pull_request.number }}
+          path: |
+            twd-artifacts/
+            .twd-agent/record.log
+          if-no-files-found: warn
+          retention-days: 14
+
+      # A fork PR gets a read-only token and cannot comment, so this is best-effort.
+      - name: Comment the link
+        if: always()
+        continue-on-error: true
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          VIDEO_URL: ${{ steps.video.outputs.artifact-url }}
+          OUTCOME: ${{ steps.record.outcome }}
+        run: |
+          if [ "$OUTCOME" = "success" ] && [ -n "$VIDEO_URL" ]; then
+            gh pr comment "$PR_NUMBER" --body "Recording: [download the artifact](${VIDEO_URL}) and unzip to play the mp4."
+          else
+            gh pr comment "$PR_NUMBER" --body "Recording failed (\`${OUTCOME}\`). The ffmpeg log is in the [run artifact](${VIDEO_URL:-$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID})."
+          fi
+
+      - name: Drop the label
+        if: always()
+        continue-on-error: true
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: gh pr edit "$PR_NUMBER" --remove-label record

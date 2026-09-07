@@ -107,6 +107,7 @@ jobs:
       - name: Develop the issue
         id: agent
         continue-on-error: true
+        timeout-minutes: 20
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
@@ -142,40 +143,10 @@ jobs:
       - name: Run TWD tests
         id: twd
         continue-on-error: true
+        timeout-minutes: 10
         uses: BRIKEV/twd-cli/.github/actions/run@main
         with:
           contract-report: "true"
-
-      # Recording (https://twd.dev/recording). ONE invocation produces ONE video
-      # containing every matched test back to back, so there is no per-test loop and
-      # no need to work out which titles changed. Needs twd-cli 1.4.0+ and
-      # twd-js 1.9.0+ (this repo pins twd-js 1.9.0).
-      #
-      # `record.enabled` stays false in twd.config.json so ordinary runs never
-      # record; --record turns it on for this invocation only. Paced playback makes
-      # this slower than a normal run, and it is the suite's third execution this
-      # job (the agent's Phase 4, the verification step, then this) — worth it while
-      # the suite is small, worth filtering with --test when it is not.
-      #
-      # Best-effort throughout: a reviewer losing the video must never cost the PR.
-      - name: Record the suite
-        id: record
-        continue-on-error: true
-        run: |
-          command -v ffmpeg >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y ffmpeg; }
-          npx twd-cli run --record 2>&1 | tee .twd-agent/record.log
-          ls -la twd-artifacts/ 2>/dev/null || echo "no recording produced"
-
-      - name: Upload the recording
-        id: video
-        if: always()
-        continue-on-error: true
-        uses: actions/upload-artifact@v4
-        with:
-          name: twd-recording-issue-${{ github.event.issue.number }}
-          path: twd-artifacts/
-          if-no-files-found: warn
-          retention-days: 14
 
       - name: Did the agent change anything?
         id: diff
@@ -206,7 +177,6 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           AGENT_OUTCOME: ${{ steps.agent.outcome }}
           TWD_OUTCOME: ${{ steps.twd.outcome }}
-          VIDEO_URL: ${{ steps.video.outputs.artifact-url }}
         run: |
           BODY=.twd-agent/pr-body.md
           if [ -f .twd-agent/run-report.md ]; then
@@ -225,16 +195,7 @@ jobs:
             printf '| Agent step | `%s` |\n' "$AGENT_OUTCOME"
             printf '| TWD suite (independent run) | `%s` |\n' "$TWD_OUTCOME"
             printf '| Job log | [run](%s) |\n' "$RUN_URL"
-            if [ -n "$VIDEO_URL" ]; then
-              printf '| Recording | [watch the suite run](%s) |\n' "$VIDEO_URL"
-            fi
           } >> "$BODY"
-          if [ -n "$VIDEO_URL" ]; then
-            {
-              printf '\nThe recording is a GitHub artifact: download and unzip it to play the mp4.\n'
-              printf 'Actions cannot embed video in a PR body.\n'
-            } >> "$BODY"
-          fi
           if [ -f .twd/contract-report.md ]; then
             {
               printf '\n<details><summary>Contract report</summary>\n\n'
@@ -273,3 +234,12 @@ jobs:
             gh issue comment "$ISSUE_NUMBER" \
               --body "The agent produced no changes for this issue. [Job log](${RUN_URL})"
           fi
+
+      # Drop the label so re-applying it re-runs the build in one click. Without
+      # this a retry needs a remove-then-add, which cost a cycle after the first
+      # cancelled run.
+      - name: Drop the label
+        if: always()
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: gh issue edit "$ISSUE_NUMBER" --remove-label agent
