@@ -122,26 +122,59 @@ jobs:
       # can take the output with it. 2 minutes: the whole point of filtering is
       # that three tests do not need six. twd-cli is pinned in package-lock.json,
       # so `npx` resolves the local binary.
+      # ONE INVOCATION PER TITLE, not one run with several --test flags. Passing
+      # them together is valid but documented to produce a single `run.<ext>`
+      # with every matched test back to back; one test per invocation makes
+      # twd-cli name each clip after its own "suite > test" path, so a reviewer
+      # gets one watchable clip per acceptance criterion. Costs a browser launch
+      # each, which is seconds.
       - name: Record the added tests
         id: record
         if: steps.titles.outputs.count != '0'
         continue-on-error: true
-        timeout-minutes: 5
+        timeout-minutes: 6
         run: |
           set -o pipefail
           mkdir -p .twd-agent
-          # One --test per title, which is how twd-cli takes several and how it
-          # produces a clip per test.
-          ARGS=()
+          FAILED=0
           while IFS= read -r title; do
-            [ -n "$title" ] && ARGS+=(--test "$title")
+            [ -z "$title" ] && continue
+            echo "::group::recording — $title"
+            timeout --signal=INT 60 npx twd-cli run --record --test "$title" 2>&1 \
+              | tee -a .twd-agent/record.log || {
+              echo "::warning::recording failed or timed out for: $title"
+              FAILED=1
+            }
+            echo "::endgroup::"
           done < .twd-agent/titles.txt
-
-          timeout --signal=INT 120 npx twd-cli run --record "${ARGS[@]}" 2>&1 \
-            | tee .twd-agent/record.log || {
-            echo "::warning::recording failed or timed out (exit $?) — see the log below"
-          }
           ls -la twd-artifacts/ 2>/dev/null || echo "no video produced"
+          exit "$FAILED"
+
+      # Puppeteer encodes VP9 with pix_fmt=gbrp (planar RGB) into an mp4, because
+      # its input is PNG and its argument list sets no -pix_fmt. The file is valid
+      # -- 111 frames decoded fine -- but QuickTime and Preview cannot open VP9 at
+      # all, and gbrp is exotic even for players that can. A recording nobody can
+      # play is not a recording, so transcode to the boring universal thing.
+      # Measured on the first working run: 202805 -> 49222 bytes, same frames,
+      # same duration. See BRIKEV/twd-cli docs/bug-record-ffmpeg-hang.md.
+      - name: Make the clips playable
+        if: always()
+        continue-on-error: true
+        run: |
+          shopt -s nullglob
+          for f in twd-artifacts/*.mp4 twd-artifacts/*.webm; do
+            CODEC=$(ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,pix_fmt -of csv=p=0 "$f")
+            TMP="${f%.*}.h264.tmp.mp4"
+            if ffmpeg -hide_banner -loglevel error -y -i "$f" \
+                 -c:v libx264 -pix_fmt yuv420p -movflags +faststart "$TMP"; then
+              mv -f "$TMP" "${f%.*}.mp4"
+              echo "  $(basename "$f"): $CODEC -> h264,yuv420p ($(stat -c%s "${f%.*}.mp4") bytes)"
+            else
+              rm -f "$TMP"
+              echo "::warning::could not transcode $f (left as $CODEC)"
+            fi
+          done
+          ls -la twd-artifacts/ 2>/dev/null || true
 
       # Printed, not just uploaded: the whole point of the wrapper is to see WHY
       # ffmpeg exited, and making that require downloading and unzipping an
@@ -183,7 +216,8 @@ jobs:
           if [ "$OUTCOME" = "skipped" ]; then
             gh pr comment "$PR_NUMBER" --body "Nothing to record: this branch added no TWD tests."
           elif [ "$OUTCOME" = "success" ] && [ -n "$VIDEO_URL" ]; then
-            gh pr comment "$PR_NUMBER" --body "Recording: [download the artifact](${VIDEO_URL}) and unzip to play the mp4."
+            CLIPS=$(ls twd-artifacts/*.mp4 2>/dev/null | wc -l | tr -d ' ')
+            gh pr comment "$PR_NUMBER" --body "Recording: ${CLIPS} clip(s), one per test this branch added — [download the artifact](${VIDEO_URL}) and unzip. h264/yuv420p, so any player opens them."
           else
             gh pr comment "$PR_NUMBER" --body "Recording failed (\`${OUTCOME}\`). The ffmpeg log is in the [run artifact](${VIDEO_URL:-$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID})."
           fi
