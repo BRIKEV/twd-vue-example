@@ -15,7 +15,7 @@
     "format": "mp4",
     "viewport": {
       "width": 1280,
-      "height": 800,
+      "height": 1600,
       "deviceScaleFactor": 1
     },
     "fps": 30,
