@@ -31,6 +31,17 @@ TWD itself (the plugin, upstream).
 
 <!-- Newest first. Add above this line. -->
 
+### When the spec asks for data the contract lacks, update the contract
+**Why:** features cannot ship otherwise. Change `contracts/todos-3.0.json` and the seed data in
+`data/data.json`, keep it additive where you can, and fix **every existing mock and fixture the
+change invalidates** — a newly `required` field breaks every mock that omits it, across all test
+files. Say in the run report that the contract changed. (2026-09-07, #2)
+
+### Never relax a contract to make a rejected mock pass
+**Why:** if the spec asked for nothing new, a rejection means the **mock** is wrong — fix the
+mock. Do not touch `mode`, `strict`, a `required` list or a field's type to get past it. That
+turns a caught bug into a silent one. (2026-09-07, #2)
+
 ### Run the suite with `npx twd-cli run` — there is no `test:ci` script
 **Why:** CI runs the tests through the `BRIKEV/twd-cli` composite action, so no npm script
 exists for them. A run that reaches for `npm run test:ci` dies on a missing script.
@@ -44,6 +55,6 @@ add or edit vitest tests unless the requirement is explicitly about them.
 
 ### Contract validation runs in `error` mode against `contracts/todos-3.0.json`
 **Why:** `twd.config.json` sets `mode: "error"` and `strict: true` for the `/api` base url, so a
-mock whose shape drifts from the OpenAPI contract fails the run instead of warning. When a mock
-is rejected, fix the mock to match the contract — never loosen the contract.
-(2026-09-07, seeded at setup)
+mock whose shape drifts from the OpenAPI contract fails the run instead of warning. What to do
+about a rejection depends on whether the spec asked for something new — see the two rules above.
+(2026-09-07, seeded at setup; amended the same day, #2)
