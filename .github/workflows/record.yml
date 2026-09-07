@@ -51,17 +51,28 @@ jobs:
         run: npm ci
 
       # A STATIC ffmpeg, not Ubuntu's. Diagnosed 2026-09-07: Puppeteer 25.10 passes
-      # `-movflags hybrid_fragmented`, which does not exist before ffmpeg 7, and
-      # ubuntu-24.04 ships 6.1.1. The mp4 muxer then fails to write its header,
-      # ffmpeg exits 630ms in, and twd-cli writes to the dead stream forever.
-      # See BRIKEV/twd-cli docs/bug-record-ffmpeg-hang.md.
+      # `-movflags hybrid_fragmented`, the mp4 muxer cannot write its header
+      # without it, ffmpeg exits 630ms in, and twd-cli writes to the dead stream
+      # forever. See BRIKEV/twd-cli docs/bug-record-ffmpeg-hang.md.
+      #
+      # WHICH versions have it, measured rather than assumed: ubuntu-24.04's 6.1.1
+      # does NOT, johnvansickle's "release" static build (7.0.2) does NOT, and
+      # 8.1.2 does. So this pins the 8.1 series, the same series verified to work
+      # on the machine where recording works. The next step proves it rather than
+      # trusting this comment.
       - name: Install a modern ffmpeg
         run: |
           set -e
-          mkdir -p "$RUNNER_TEMP/ffmpeg"
-          curl -fsSL https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz \
-            | tar -xJ --strip-components=1 -C "$RUNNER_TEMP/ffmpeg"
-          echo "$RUNNER_TEMP/ffmpeg" >> "$GITHUB_PATH"
+          FFDIR="$RUNNER_TEMP/ffmpeg"
+          mkdir -p "$FFDIR"
+          curl -fsSL https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n8.1-latest-linux64-gpl-8.1.tar.xz \
+            | tar -xJ --strip-components=1 -C "$FFDIR"
+          # Located, not hardcoded: this archive puts the binary in bin/ while the
+          # johnvansickle one puts it at the root, and guessing wrong surfaces two
+          # steps later as an unhelpful "ffmpeg: not found".
+          FFBIN="$(find "$FFDIR" -type f -name ffmpeg -perm -u+x | head -1)"
+          test -n "$FFBIN" || { echo "::error::no ffmpeg binary found in the archive"; exit 1; }
+          dirname "$FFBIN" >> "$GITHUB_PATH"
 
       # The CAPABILITY, not the version number: the flags come from Puppeteer and
       # move independently of ffmpeg's numbering, so assert the thing actually
