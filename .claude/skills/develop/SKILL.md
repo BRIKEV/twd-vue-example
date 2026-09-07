@@ -34,6 +34,10 @@ Read both, in one parallel batch, before anything else:
   re-derive from existing tests what this file states, and never contradict it.
 - **`.claude/skills/develop/LEARNINGS.md`** — what previous runs got wrong, and the rules that
   came out of it. Binding, not advisory.
+- **`.twd-agent/spec.md`**, if it exists — the refined spec for this issue, written by
+  `/refine` and placed here from the issue's latest `<!-- twd-spec:v1 -->` comment. When
+  present it is **authoritative over the issue text**: its acceptance criteria are the
+  requirement. When absent, work from the issue text as before.
 
 ## Phase 1 — understand the requirement
 
@@ -63,6 +67,9 @@ they see Y" / "when this request fires, its payload contains Z".
 - **One journey test per feature.** Model sequential interactions as a single `it()` that
   asserts the contract at each step — not one `it()` per click. Add a second test only for a
   genuinely distinct concern: a boundary rule, another route, a cross-feature interaction.
+- **With a spec present, write exactly one journey test per acceptance criterion** — the
+  criteria were written to map 1:1. Do not add tests the spec does not ask for, and do not
+  merge two criteria into one test.
 - Test up to third-party boundaries (iframes, external SDKs). Document what you cannot cover.
 
 Run them and confirm they **fail**:

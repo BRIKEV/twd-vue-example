@@ -1,15 +1,22 @@
-# The develop brain — what lives where
+# The agent brain — what lives where
 
-When `/develop` gets something wrong, the fix is **a rule, not the generated code**. This file
-says which rule file owns which kind of mistake.
+Covers both skills: `/refine` and `/develop`. When either gets something wrong, the fix is
+**a rule, not the generated code** — this file says which rule file owns which kind of mistake.
 
-Nothing here is loaded during a run — `SKILL.md` is the agent's entry point and this document
-is for the humans maintaining it.
+Nothing here is loaded during a run. It is for the humans maintaining the brain.
 
-## The four surfaces
+## Two labels, two brains
+
+`refinement` turns a vague issue into a short test-shaped spec, posted as a
+`<!-- twd-spec:v1 -->` comment for a human to approve. `agent` then builds it, reading the
+latest such comment as the requirement. Refinement is the thinking half and gets the
+stronger model; develop is mostly execution once the criteria are test-shaped.
+
+## The surfaces
 
 | File | Owns | Changes | Edited by |
 |---|---|---|---|
+| `.claude/skills/refine/SKILL.md` | **How a vague issue becomes a spec.** Brevity budgets, the test-shaped criteria format, when to refuse, what counts as `how` | Rarely | Humans |
 | `.claude/skills/develop/SKILL.md` | **The method.** Phases, hard rules, the 3-attempt loop limit, the run-report contract, the unattended contract | Rarely | Humans |
 | `.claude/skills/develop/LEARNINGS.md` | **This application, and this team's judgement.** What a requirement usually means here, what not to touch, which layer owns what | Often — after most disappointing runs | Humans |
 | `.claude/twd-patterns.md` | **This project's TWD wiring.** Imports, `beforeEach`, visit paths, mock urls, `componentHost()`, Teleport handling | When the testing setup changes | `/twd:setup`, then humans |
@@ -47,6 +54,10 @@ Worked examples:
 | Touched an unrelated view while fixing the todos list | `LEARNINGS.md` (add a don't-touch rule) |
 | Could not tell which view "the todo list" meant | `LEARNINGS.md` |
 | Ran out of time at 30 minutes | `agent.yml` — a harness knob |
+| Spec named a component or a file path | `refine/SKILL.md` (it owns *what*, never *how*) |
+| Spec was three screens of prose nobody read | `refine/SKILL.md` (the word budget) |
+| Spec came back with five questions instead of decisions | `refine/SKILL.md` (decide and disclose) |
+| Criteria were not observable, so the tests asserted nothing | `refine/SKILL.md` (the criteria format) |
 | Died because the dev server never came up | `agent.yml` |
 
 ## The promotion workflow

@@ -81,6 +81,25 @@ jobs:
         env:
           CI: true
 
+      # The spec /refine posted, if any: the LATEST comment whose first line is the
+      # marker. Written to the path Step 0 of the develop skill reads, where it is
+      # authoritative over the issue text. No spec means the old behaviour --
+      # work from the issue as written.
+      - name: Fetch the refined spec
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          mkdir -p .twd-agent
+          gh issue view "$ISSUE_NUMBER" --json comments \
+            --jq '[.comments[] | select(.body | startswith("<!-- twd-spec:v1 -->"))] | last | .body // empty' \
+            > .twd-agent/spec.md
+          if [ -s .twd-agent/spec.md ]; then
+            echo "spec found, $(wc -w < .twd-agent/spec.md) words"
+          else
+            rm -f .twd-agent/spec.md
+            echo "no spec comment on this issue; working from the issue text"
+          fi
+
       # Every value from the issue arrives through env, never through ${{ }} inside
       # this script: interpolating a title or body here would let an issue author
       # inject shell. The prompt then marks that text as data the agent must not
@@ -108,8 +127,12 @@ jobs:
             printf -- '----- END REQUIREMENT -----\n'
           } > .twd-agent/prompt.txt
 
+          # The EXECUTING half. Refinement did the thinking on the stronger model and
+          # left acceptance criteria that map 1:1 to journey tests, so this is closer
+          # to translation. Unproven though: if quality drops, the first thing to try
+          # is this model back on claude-opus-5, before touching any rule.
           claude -p "$(cat .twd-agent/prompt.txt)" \
-            --model claude-opus-5 \
+            --model claude-sonnet-5 \
             --plugin-dir "$RUNNER_TEMP/twd-ai" \
             --dangerously-skip-permissions \
             2>&1 | tee .twd-agent/agent.log
