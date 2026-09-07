@@ -1,9 +1,24 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { fetchTodos, createTodo, deleteTodo, type Todo } from '../api/todos'
+
+type TodoFilter = 'all' | 'completed' | 'pending'
 
 const todos = ref<Todo[]>([])
 const isLoading = ref(false)
+const filter = ref<TodoFilter>('all')
+
+const filterOptions: { value: TodoFilter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'pending', label: 'Pending' },
+]
+
+const filteredTodos = computed(() => {
+  if (filter.value === 'completed') return todos.value.filter((todo) => todo.done)
+  if (filter.value === 'pending') return todos.value.filter((todo) => !todo.done)
+  return todos.value
+})
 
 const newTodo = ref({
   title: '',
@@ -118,6 +133,24 @@ const handleDeleteTodo = async (id: string) => {
       <div class="space-y-4">
         <h2 class="text-xl font-semibold text-gray-900">Todo Items</h2>
 
+        <div class="flex gap-2" role="group" aria-label="Filter todos">
+          <button
+            v-for="option in filterOptions"
+            :key="option.value"
+            type="button"
+            @click="filter = option.value"
+            :aria-pressed="filter === option.value"
+            :class="[
+              'px-4 py-2 rounded-lg font-medium transition duration-200',
+              filter === option.value
+                ? 'bg-blue-600 text-white'
+                : 'bg-white text-gray-700 border border-gray-300',
+            ]"
+          >
+            {{ option.label }}
+          </button>
+        </div>
+
         <div v-if="isLoading" class="text-center text-gray-500">
           Loading todos...
         </div>
@@ -126,9 +159,13 @@ const handleDeleteTodo = async (id: string) => {
           <p class="text-gray-500">No todos yet. Create one above!</p>
         </div>
 
+        <div v-else-if="filteredTodos.length === 0" class="bg-white rounded-lg shadow-md p-6 text-center">
+          <p class="text-gray-500">No todos match this filter.</p>
+        </div>
+
         <div v-else class="space-y-4">
           <div
-            v-for="todo in todos"
+            v-for="todo in filteredTodos"
             :key="todo.id"
             class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition duration-200"
           >
@@ -143,6 +180,9 @@ const handleDeleteTodo = async (id: string) => {
             </div>
             <p class="text-gray-600 mb-3">{{ todo.description }}</p>
             <p class="text-sm text-gray-500">Date: {{ todo.date }}</p>
+            <p class="text-sm" :class="todo.done ? 'text-green-700' : 'text-yellow-700'">
+              Status: {{ todo.done ? 'Completed' : 'Pending' }}
+            </p>
           </div>
         </div>
       </div>
