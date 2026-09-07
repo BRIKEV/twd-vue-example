@@ -14,7 +14,8 @@
     "test": "vitest",
     "serve": "json-server --watch data/data.json --routes data/routes.json --port 3001",
     "serve:dev": "npm-run-all --parallel serve dev",
-    "type-check": "vue-tsc --build"
+    "type-check": "vue-tsc --build",
+    "lock": "docker run --rm -v \"$PWD\":/app -w /app node:24 npm install --package-lock-only --no-audit --no-fund"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.18",
