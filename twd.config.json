@@ -8,20 +8,5 @@
       "mode": "error",
       "strict": true
     }
-  ],
-  "record": {
-    "enabled": false,
-    "dir": "./twd-artifacts",
-    "format": "mp4",
-    "viewport": {
-      "width": 1280,
-      "height": 1600,
-      "deviceScaleFactor": 1
-    },
-    "fps": 30,
-    "pace": 400,
-    "postRoll": 800,
-    "hideSidebar": true,
-    "ffmpegPath": "./scripts/ffmpeg-log.sh"
-  }
+  ]
 }

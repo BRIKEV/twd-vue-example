@@ -36,7 +36,7 @@
     "npm-run-all": "^4.1.5",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.18",
-    "twd-cli": "1.6.0",
+    "twd-cli": "https://github.com/BRIKEV/twd-cli/archive/5d4f8c7118efe2435c38f8098f32b1374d1092a1.tar.gz",
     "twd-js": "1.10.0",
     "twd-relay": "1.4.0",
     "typescript": "~5.9.3",
