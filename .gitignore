@@ -34,3 +34,9 @@ coverage
 
 # Vitest
 __screenshots__/
+
+# agent run reports (/develop)
+.twd-agent/
+
+# local Claude Code settings (the brain itself IS committed)
+.claude/settings.local.json
