@@ -65,7 +65,7 @@ jobs:
       # comes out, so it must not change under an unchanged repo.
       - name: Record the tests this branch added
         id: rec
-        uses: BRIKEV/twd-cli/.github/actions/record@036bf49687121f5d890cc74e8ccb0aca738be556
+        uses: BRIKEV/twd-cli/.github/actions/record@0b88dac23bae342ebee9cb2f86b8d0f8b1fbd0c6
         with:
           changed-since: ${{ github.event.pull_request.base.sha }}
           artifact-name: twd-recording-pr-${{ github.event.pull_request.number }}
