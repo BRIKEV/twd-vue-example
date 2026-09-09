@@ -82,6 +82,7 @@ describe("Todo List Page", () => {
       title: "Test Todo",
       description: "Test Description",
       date: "2024-12-20",
+      done: false,
     });
 
     const todoList = await screenDom.getAllByText(/Learn TWD|Build Todo App|Test Todo/);
@@ -123,5 +124,70 @@ describe("Todo List Page", () => {
     const todoList = await screenDom.findAllByText(/Learn TWD|Build Todo App/);
     expect(todoList).to.have.length(1);
     twd.should(todoList[0] as HTMLElement, "be.visible");
+  });
+
+  it("shows every todo with its done state and All selected by default", async () => {
+    await twd.mockRequest("getTodoList", {
+      method: "GET",
+      url: "/api/todos",
+      response: todoListMock,
+      status: 200,
+    });
+    await twd.visit("/todos");
+    await twd.waitForRequest("getTodoList");
+
+    const allButton = await screenDom.getByRole("button", { name: "All" });
+    twd.should(allButton, "have.attr", "aria-pressed", "true");
+
+    const completedButton = await screenDom.getByRole("button", { name: "Completed" });
+    twd.should(completedButton, "have.attr", "aria-pressed", "false");
+
+    const pendingButton = await screenDom.getByRole("button", { name: "Pending" });
+    twd.should(pendingButton, "have.attr", "aria-pressed", "false");
+
+    const learnTwd = await screenDom.getByText("Learn TWD");
+    twd.should(learnTwd, "be.visible");
+    const buildTodoApp = await screenDom.getByText("Build Todo App");
+    twd.should(buildTodoApp, "be.visible");
+
+    const statuses = await screenDom.getAllByText(/Status: (Completed|Pending)/);
+    expect(statuses).to.have.length(2);
+  });
+
+  it("narrows the list to completed todos without a page reload", async () => {
+    await twd.mockRequest("getTodoList", {
+      method: "GET",
+      url: "/api/todos",
+      response: todoListMock,
+      status: 200,
+    });
+    await twd.visit("/todos");
+    await twd.waitForRequest("getTodoList");
+
+    const completedButton = await screenDom.getByRole("button", { name: "Completed" });
+    await userEvent.click(completedButton);
+
+    const learnTwd = await screenDom.getByText("Learn TWD");
+    twd.should(learnTwd, "be.visible");
+    expect(screenDom.queryByText("Build Todo App")).to.be.null;
+    expect(twd.getRequestCount("getTodoList")).to.equal(1);
+  });
+
+  it("narrows the list to pending todos", async () => {
+    await twd.mockRequest("getTodoList", {
+      method: "GET",
+      url: "/api/todos",
+      response: todoListMock,
+      status: 200,
+    });
+    await twd.visit("/todos");
+    await twd.waitForRequest("getTodoList");
+
+    const pendingButton = await screenDom.getByRole("button", { name: "Pending" });
+    await userEvent.click(pendingButton);
+
+    const buildTodoApp = await screenDom.getByText("Build Todo App");
+    twd.should(buildTodoApp, "be.visible");
+    expect(screenDom.queryByText("Learn TWD")).to.be.null;
   });
 });
