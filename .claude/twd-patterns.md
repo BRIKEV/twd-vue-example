@@ -5,16 +5,34 @@
 - **Framework**: Vue 3 (Composition API, `<script setup>`)
 - **Vite base path**: `/`
 - **Dev server port**: `5173`
+- **App URL**: `http://localhost:5173`
+- **Dev command**: `npm run serve:dev`
+- **Default branch**: `main`
 - **Entry point**: `src/main.ts` (contains no TWD code — the `twd()` and `twdRemote()` Vite plugins handle it)
 - **Public folder**: `public/`
 - **Test file pattern**: `/**/*.twd.test.ts` (set in `vite.config.ts`)
+- **Closing run**: full suite
 
-### Relay Commands
+### Runner Commands
+
+twd-cli drives its own headless browser — only the dev server has to be up (`npm run serve:dev`).
 
 ```bash
 # Run all tests
-npx twd-relay run
+npm run test:ci
+
+# Run specific tests by name (matches "suite > test", case-insensitive; repeatable)
+npx twd-cli run --test "should render the list"
+npx twd-cli run --test "should create" --test "should show the error"
+
+# Only the tests this branch added or changed
+npx twd-cli run --changed-since origin/main
+
+# Record a run to video (one clip per matched test, needs ffmpeg)
+npx twd-cli run --record --test "should render the list"
 ```
+
+Every run writes `.twd/report/`: `run.json` (the result), `summary.md` and `index.html`. The folder is replaced on each run.
 
 ## Standard Imports
 

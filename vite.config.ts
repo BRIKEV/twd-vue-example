@@ -6,6 +6,7 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 import { twdRemote } from 'twd-relay/vite';
 import { twd } from 'twd-js/vite-plugin';
 import { configDefaults } from 'vitest/config';
+import istanbul from 'vite-plugin-istanbul';
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -17,6 +18,12 @@ export default defineConfig({
       testFilePattern: '/**/*.twd.test.ts',
     }),
     twdRemote() as PluginOption,
+    istanbul({
+      include: 'src/**/*',
+      exclude: ['node_modules', '**/*.twd.test.ts', 'src/twd-tests/**'],
+      requireEnv: !process.env.CI,
+      extension: ['.ts', '.vue'],
+    }),
   ],
   resolve: {
     alias: {

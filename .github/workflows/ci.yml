@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [ main ]
 
+# Lets the action post the contract validation summary as a PR comment.
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -23,9 +28,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # json-server first: /todos fetches on load from http://localhost:3001/api.
+      - name: Start mock API
+        run: |
+          nohup npm run serve > json-server.log 2>&1 &
+          npx wait-on http://localhost:3001/api/todos
+
       - name: Start Vite dev server
         run: |
-          nohup npm run dev > vite.log 2>&1 &
+          nohup npm run dev:ci > vite.log 2>&1 &
           npx wait-on http://localhost:5173
         env:
           CI: true
@@ -34,3 +45,6 @@ jobs:
         uses: BRIKEV/twd-cli/.github/actions/run@main
         with:
           contract-report: 'true'
+
+      - name: Display coverage
+        run: npm run collect:coverage:text

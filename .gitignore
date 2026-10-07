@@ -46,3 +46,6 @@ __screenshots__/
 
 # TWD recordings (twd.dev/recording)
 twd-artifacts/
+
+# coverage (vite-plugin-istanbul / nyc)
+.nyc_output
