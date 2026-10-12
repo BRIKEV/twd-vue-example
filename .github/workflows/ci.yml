@@ -28,6 +28,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Seconds, before any server starts: a broken test fails here, not in the browser.
+      - name: Lint TWD tests
+        run: npm run lint:twd
+
       # json-server first: /todos fetches on load from http://localhost:3001/api.
       - name: Start mock API
         run: |
