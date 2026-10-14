@@ -75,7 +75,7 @@
     "schemas": {
       "Todo": {
         "type": "object",
-        "required": ["id", "title", "description", "date"],
+        "required": ["id", "title", "description", "date", "done"],
         "properties": {
           "id": {
             "type": "string"
@@ -88,12 +88,15 @@
           },
           "date": {
             "type": "string"
+          },
+          "done": {
+            "type": "boolean"
           }
         }
       },
       "NewTodo": {
         "type": "object",
-        "required": ["title", "description", "date"],
+        "required": ["title", "description", "date", "done"],
         "properties": {
           "title": {
             "type": "string"
@@ -103,6 +106,9 @@
           },
           "date": {
             "type": "string"
+          },
+          "done": {
+            "type": "boolean"
           }
         }
       }

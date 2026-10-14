@@ -26,7 +26,7 @@ describe('TodosView component', () => {
     await twd.mockRequest('createTodo', {
       method: 'POST',
       url: '/api/todos',
-      response: { id: '1', title: 'Write the Vue post', description: 'In a real browser', date: '2026-09-01' },
+      response: { id: '1', title: 'Write the Vue post', description: 'In a real browser', date: '2026-09-01', done: false },
       status: 201,
     })
 
@@ -44,6 +44,7 @@ describe('TodosView component', () => {
       title: 'Write the Vue post',
       description: 'In a real browser',
       date: '2026-09-01',
+      done: false,
     })
   })
 })
