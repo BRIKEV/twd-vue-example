@@ -51,5 +51,10 @@
     "vite-plugin-vue-devtools": "^8.0.5",
     "vitest": "^4.1.11",
     "vue-tsc": "^3.2.3"
+  },
+  "overrides": {
+    "twd-relay": {
+      "twd-js": "$twd-js"
+    }
   }
 }
