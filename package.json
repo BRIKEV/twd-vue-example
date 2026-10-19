@@ -16,7 +16,7 @@
     "serve:dev": "npm-run-all --parallel serve dev",
     "type-check": "vue-tsc --build",
     "lock": "docker run --rm -v \"$PWD\":/app -w /app node:24 npm install --package-lock-only --no-audit --no-fund",
-    "dev:ci": "CI=true vite",
+    "dev:ci": "CI=true NODE_ENV=production vite",
     "test:ci": "npx twd-cli run",
     "collect:coverage:text": "npx nyc report --reporter=text --temp-dir .nyc_output",
     "collect:coverage:html": "npx nyc report --reporter=html --temp-dir .nyc_output",
