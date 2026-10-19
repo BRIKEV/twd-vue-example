@@ -43,8 +43,8 @@
     "nyc": "^18.0.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.18",
-    "twd-cli": "1.10.0",
-    "twd-js": "1.12.0-beta.1",
+    "twd-cli": "1.11.0",
+    "twd-js": "1.12.0",
     "twd-lint": "1.0.0",
     "twd-relay": "1.4.0",
     "typescript": "~5.9.3",
@@ -53,10 +53,5 @@
     "vite-plugin-vue-devtools": "^8.0.5",
     "vitest": "^4.1.11",
     "vue-tsc": "^3.2.3"
-  },
-  "overrides": {
-    "twd-relay": {
-      "twd-js": "1.12.0-beta.1"
-    }
   }
 }
