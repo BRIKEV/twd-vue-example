@@ -9,6 +9,7 @@ export interface Todo {
   title: string;
   description: string;
   date: string;
+  done: boolean;
 }
 
 interface NewTodo {
@@ -23,7 +24,7 @@ export const fetchTodos = async () => {
 };
 
 export const createTodo = async (todo: NewTodo) => {
-  const response = await api.post<Todo>('/todos', todo);
+  const response = await api.post<Todo>('/todos', { ...todo, done: false });
   return response.data;
 };
 
