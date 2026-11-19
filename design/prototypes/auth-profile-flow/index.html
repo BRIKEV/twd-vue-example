@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TWD Vue Example — Autenticación y perfil</title>
+<style>
+  :root{
+    --bg-page:#f9fafb; --bg-surface:#ffffff;
+    --border-subtle:#e5e7eb; --border-input:#d1d5dc;
+    --text-primary:#101828; --text-body:#1e2939; --text-label:#364153;
+    --text-secondary:#4a5565; --text-muted:#6a7282; --text-on-accent:#ffffff;
+    --accent:#155dfc; --accent-hover:#1447e6; --focus-ring:#2b7fff;
+    --radius-lg:8px;
+    --shadow-md:0 4px 6px -1px rgb(0 0 0 / .1),0 2px 4px -2px rgb(0 0 0 / .1);
+    --shadow-lg:0 10px 15px -3px rgb(0 0 0 / .1),0 4px 6px -4px rgb(0 0 0 / .1);
+    --ease:cubic-bezier(0.4,0,0.2,1); --dur:150ms;
+    --font:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue','Noto Sans',Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0}
+  body{font-family:var(--font);background:var(--bg-page);color:var(--text-primary);min-height:100vh}
+  header.app-header{position:sticky;top:0;z-index:10;background:rgba(255,255,255,.8);backdrop-filter:blur(8px);border-bottom:1px solid var(--border-subtle)}
+  .header-inner{max-width:1152px;margin:0 auto;padding:16px;display:flex;justify-content:space-between;align-items:center}
+  .app-name{font-size:20px;line-height:28px;font-weight:600;color:var(--text-primary)}
+  nav.user-nav{display:flex;gap:16px;align-items:center}
+  nav.user-nav a{font-size:14px;line-height:20px;font-weight:500;color:var(--text-secondary);text-decoration:none;transition:color var(--dur) var(--ease)}
+  nav.user-nav a:hover{color:var(--accent)}
+  nav.user-nav a.active{color:var(--accent)}
+  main{max-width:672px;margin:0 auto;padding:48px 16px}
+  @media(min-width:640px){main{padding:48px 24px}}
+  h1.page-title{font-size:36px;line-height:40px;font-weight:700;margin-bottom:32px}
+  h2.section-title{font-size:20px;line-height:28px;font-weight:600;margin-bottom:24px}
+  .card{background:var(--bg-surface);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);padding:24px;margin-bottom:32px}
+  form .field{margin-bottom:16px}
+  label{display:block;font-size:14px;line-height:20px;font-weight:500;color:var(--text-label);margin-bottom:4px}
+  input,textarea{width:100%;padding:8px 16px;border:1px solid var(--border-input);border-radius:var(--radius-lg);background:var(--bg-surface);font-size:16px;line-height:24px;color:var(--text-body);font-family:inherit;transition:border-color var(--dur) var(--ease),box-shadow var(--dur) var(--ease)}
+  input:focus,textarea:focus{outline:none;border-color:transparent;box-shadow:0 0 0 2px var(--focus-ring)}
+  .btn{display:inline-block;border:none;cursor:pointer;border-radius:var(--radius-lg);font-family:inherit;font-size:16px;line-height:24px;font-weight:600;transition:background var(--dur) var(--ease),box-shadow var(--dur) var(--ease)}
+  .btn-primary{background:var(--accent);color:var(--text-on-accent);padding:8px 16px;width:100%}
+  .btn-primary:hover{background:var(--accent-hover)}
+  .btn-block-lg{padding:12px 24px;min-width:200px}
+  .btn-danger{background:#e7000b;color:#fff;padding:4px 12px;border-radius:4px;font-size:16px;line-height:24px}
+  .btn-danger:hover{background:#c10007}
+  .helper{font-size:14px;line-height:20px;color:var(--text-muted);margin-top:16px;text-align:center}
+  .helper a{color:var(--accent);font-weight:500;text-decoration:underline}
+  .subtitle{font-size:16px;line-height:24px;color:var(--text-secondary);margin:-24px 0 32px}
+  .avatar{width:64px;height:64px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:600}
+  .profile-row{display:flex;gap:16px;align-items:center;margin-bottom:24px}
+  .field-error{font-size:14px;line-height:20px;color:#e7000b;margin-top:4px}
+  .banner{background:#e7000b;color:#fff;padding:8px 16px;border-radius:var(--radius-lg);font-size:14px;line-height:20px;font-weight:500;margin-bottom:16px}
+  nav.screens{position:fixed;bottom:0;left:0;right:0;background:#101828;padding:8px 16px;display:flex;gap:16px;justify-content:center;z-index:20}
+  nav.screens a{color:#d1d5dc;font-size:14px;text-decoration:none}
+  nav.screens a:hover{color:#fff}
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="header-inner">
+    <span class="app-name">TWD Vue Example</span>
+    <nav class="user-nav" aria-label="Navegación principal">
+      <a href="#/login" id="nav-login">Iniciar sesión</a>
+      <a href="#/register" id="nav-register">Registrarse</a>
+      <a href="#/profile" id="nav-profile">Mi perfil</a>
+    </nav>
+  </div>
+</header>
+
+<main id="app"></main>
+
+<!-- PROTOTYPE ONLY: screen switcher for reviewers -->
+<nav class="screens" aria-label="Prototype screens">
+  <a href="#/login">#/login</a>
+  <a href="#/register">#/register</a>
+  <a href="#/profile">#/profile</a>
+</nav>
+
+<template id="screen-login">
+  <!-- DEV: route /login · requiere sesión no; si ya hay sesión redirige a /profile -->
+  <h1 class="page-title">Iniciar sesión</h1>
+  <p class="subtitle">Accede con tu email y contraseña.</p>
+  <div class="card">
+    <div id="login-error" class="banner" hidden>Datos incorrectos. Revisa tu email y contraseña.</div>
+    <form id="login-form" novalidate>
+      <div class="field">
+        <label for="login-email">Email</label>
+        <input id="login-email" name="email" type="email" required autocomplete="email" placeholder="tu@email.com">
+      </div>
+      <div class="field">
+        <label for="login-password">Contraseña</label>
+        <input id="login-password" name="password" type="password" required minlength="8" autocomplete="current-password" placeholder="••••••••">
+      </div>
+      <button type="submit" class="btn btn-primary">Entrar</button>
+    </form>
+  </div>
+  <p class="helper">¿No tienes cuenta? <a href="#/register">Regístrate</a></p>
+  <!-- DEV (proposed): POST /api/auth/login { email, password } → 200 + session · 401 credenciales inválidas (muestra el banner) -->
+</template>
+
+<template id="screen-register">
+  <!-- DEV: route /register · si ya hay sesión redirige a /profile -->
+  <h1 class="page-title">Crear cuenta</h1>
+  <p class="subtitle">Regístrate para guardar tus todos y completar tu perfil.</p>
+  <div class="card">
+    <div id="register-error" class="banner" hidden>Ese email ya está registrado. Inicia sesión.</div>
+    <form id="register-form" novalidate>
+      <div class="field">
+        <label for="reg-email">Email</label>
+        <input id="reg-email" name="email" type="email" required autocomplete="email" placeholder="tu@email.com">
+      </div>
+      <div class="field">
+        <label for="reg-password">Contraseña</label>
+        <input id="reg-password" name="password" type="password" required minlength="8" autocomplete="new-password" placeholder="Mínimo 8 caracteres">
+        <p class="helper" style="text-align:left;margin-top:4px">Mínimo 8 caracteres.</p>
+      </div>
+      <button type="submit" class="btn btn-primary">Registrarse</button>
+    </form>
+  </div>
+  <p class="helper">¿Ya tienes cuenta? <a href="#/login">Inicia sesión</a></p>
+  <!-- DEV (proposed): POST /api/auth/register { email, password } → 201 + session · 409 email duplicado (muestra el banner) -->
+</template>
+
+<template id="screen-profile">
+  <!-- DEV: route /profile · requiere sesión, si no hay → redirect a /login -->
+  <h1 class="page-title">Mi perfil</h1>
+  <div class="card">
+    <div class="profile-row">
+      <div class="avatar" id="avatar" aria-hidden="true"></div>
+      <div>
+        <div id="avatar-name" style="font-size:18px;line-height:28px;font-weight:600">Sin nombre</div>
+        <div id="avatar-email" style="font-size:14px;line-height:20px;color:var(--text-muted)"></div>
+      </div>
+    </div>
+    <div id="saved-msg" class="field-error" style="color:#15803d" hidden hidden>Cambios guardados.</div>
+    <form id="profile-form" novalidate>
+      <div class="field">
+        <label for="first-name">Nombre</label>
+        <input id="first-name" name="firstName" type="text" required autocomplete="given-name" placeholder="Ana">
+      </div>
+      <div class="field">
+        <label for="last-name">Apellidos</label>
+        <input id="last-name" name="lastName" type="text" required autocomplete="family-name" placeholder="García López">
+      </div>
+      <div class="field">
+        <label for="profile-email">Email</label>
+        <input id="profile-email" name="email" type="email" disabled>
+        <!-- DEV: el email viene de la sesión y no es editable en esta pantalla -->
+      </div>
+      <button type="submit" class="btn btn-primary">Guardar cambios</button>
+    </form>
+    <!-- DEV (proposed): PATCH /api/me { firstName, lastName } → 200 + user actualizado -->
+    <p class="helper"><a href="#" id="logout">Cerrar sesión</a></p>
+    <!-- DEV (proposed): POST /api/auth/logout → 204 + elimina sesión · redirect a /login -->
+  </div>
+</template>
+
+<script>
+// PROTOTYPE ONLY — scaffolding so this file works standalone. Not part of the design; do not port.
+// PROTOTYPE: fake data · DEV: la sesión viene de POST /api/auth/login|register; el usuario de GET /api/me
+const initialState = () => ({
+  users: [{ email: 'ana@example.com', password: 'password123', firstName: 'Ana', lastName: 'García' }],
+  session: null,
+});
+let state = initialState();
+
+function fullName(u) { return u ? `${u.firstName || ''} ${u.lastName || ''}`.trim() : ''; }
+
+function navActive(hash) {
+  document.querySelectorAll('nav.user-nav a').forEach(a => a.classList.toggle('active', a.getAttribute('href') === hash));
+}
+
+const screens = {
+  login(app) {
+    navActive('#/login');
+    const form = app.querySelector('#login-form');
+    const err = app.querySelector('#login-error');
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const email = form.email.value.trim().toLowerCase();
+      const password = form.password.value;
+      const user = state.users.find(u => u.email === email && u.password === password);
+      if (!user) { err.hidden = false; return; }
+      state.session = { email: user.email };
+      location.hash = '#/profile';
+    });
+  },
+  register(app) {
+    navActive('#/register');
+    const form = app.querySelector('#register-form');
+    const err = app.querySelector('#register-error');
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const email = form.email.value.trim().toLowerCase();
+      if (state.users.some(u => u.email === email)) { err.hidden = false; return; }
+      state.users.push({ email, password: form.password.value, firstName: '', lastName: '' });
+      state.session = { email };
+      location.hash = '#/profile';
+    });
+  },
+  profile(app) {
+    navActive('#/profile');
+    const user = state.users.find(u => u.email === state.session?.email);
+    const form = app.querySelector('#profile-form');
+    const msg = app.querySelector('#saved-msg');
+    form.firstName.value = user.firstName || '';
+    form.lastName.value = user.lastName || '';
+    form.email.value = user.email;
+    function paintAvatar() {
+      const n = fullName(user);
+      app.querySelector('#avatar').textContent = n ? n.split(/\s+/).map(w => w[0].toUpperCase()).slice(0, 2).join('') : '?';
+      app.querySelector('#avatar-name').textContent = n || 'Sin nombre';
+      app.querySelector('#avatar-email').textContent = user.email;
+    }
+    paintAvatar();
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      user.firstName = form.firstName.value.trim();
+      user.lastName = form.lastName.value.trim();
+      paintAvatar();
+      msg.hidden = false;
+    });
+    app.querySelector('#logout').addEventListener('click', (e) => {
+      e.preventDefault();
+      state.session = null;
+      location.hash = '#/login';
+    });
+  },
+};
+
+function render() {
+  let name = location.hash.replace('#/', '') || 'login';
+  if (!screens[name]) name = 'login';
+  if (name === 'profile' && !state.session) { location.hash = '#/login'; return; }
+  if ((name === 'login' || name === 'register') && state.session) { location.hash = '#/profile'; return; }
+  const app = document.getElementById('app');
+  app.replaceChildren(document.getElementById(`screen-${name}`).content.cloneNode(true));
+  screens[name](app);
+}
+addEventListener('hashchange', render);
+addEventListener('popstate', render);
+function resetApp() { state = initialState(); history.replaceState(null, '', '#/login'); render(); }
+render();
+
+// PROTOTYPE ONLY: Slack's preview sandbox blocks form submission. This re-dispatches it as a plain
+// `submit` event (after native validation) so the forms below work there too. Do not port.
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('button[type=submit], button:not([type]), input[type=submit]');
+  const form = btn && btn.form;
+  if (!form) return;
+  e.preventDefault();
+  if (!form.noValidate && !form.reportValidity()) return;
+  form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true, submitter: btn }));
+}, true);
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/twd-js@1.13.0/dist/twd.global.js"></script>
+<script>
+  sessionStorage.setItem('twd-pace', sessionStorage.getItem('twd-pace') || '600');
+  const { initTWD, describe, it, beforeEach, twd, userEvent, screenDom, screenDomGlobal, expect } = window.TWD;
+  initTWD(
+    {
+      scenarios: async () => {
+        describe('Flujo de autenticación y perfil', () => {
+          beforeEach(() => resetApp());
+
+          it('un usuario nuevo se registra y aterriza en su perfil', async () => {
+            const user = userEvent.setup();
+            await user.type(await screenDom.findByLabelText(/email/i), 'luis@example.com');
+            await user.type(await screenDom.findByLabelText(/contraseña/i), 'password123');
+            await user.click(await screenDom.findByRole('button', { name: /registrarse/i }));
+            twd.should(await screenDom.findByRole('heading', { name: /mi perfil/i }), 'be.visible');
+            twd.should(await screenDom.findByText('luis@example.com'), 'be.visible');
+          });
+
+          it('credenciales incorrectas muestran el error y no crean sesión', async () => {
+            const user = userEvent.setup();
+            await user.type(await screenDom.findByLabelText(/email/i), 'ana@example.com');
+            await user.type(await screenDom.findByLabelText(/contraseña/i), 'wrongpass1');
+            await user.click(await screenDom.findByRole('button', { name: /entrar/i }));
+            twd.should(await screenDom.findByText(/datos incorrectos/i), 'be.visible');
+          });
+
+          it('ana inicia sesión y completa su nombre y apellidos', async () => {
+            const user = userEvent.setup();
+            await user.type(await screenDom.findByLabelText(/email/i), 'ana@example.com');
+            await user.type(await screenDom.findByLabelText(/contraseña/i), 'password123');
+            await user.click(await screenDom.findByRole('button', { name: /entrar/i }));
+            const first = await screenDom.findByLabelText(/nombre/i, { exact: false });
+            await user.clear(first);
+            await user.type(first, 'Ana María');
+            await user.type(await screenDom.findByLabelText(/apellidos/i), 'García Ruiz');
+            await user.click(await screenDom.findByRole('button', { name: /guardar cambios/i }));
+            twd.should(await screenDom.findByText('Ana María García Ruiz'), 'be.visible');
+            twd.should(await screenDom.findByText(/cambios guardados/i), 'be.visible');
+          });
+
+          it('el email del perfil es de solo lectura', async () => {
+            const user = userEvent.setup();
+            await user.type(await screenDom.findByLabelText(/email/i), 'ana@example.com');
+            await user.type(await screenDom.findByLabelText(/contraseña/i), 'password123');
+            await user.click(await screenDom.findByRole('button', { name: /entrar/i }));
+            const email = await screenDom.findByLabelText(/email/i);
+            twd.should(email, 'be.disabled');
+          });
+
+          it('cerrar sesión vuelve al login y protege el perfil', async () => {
+            const user = userEvent.setup();
+            await user.type(await screenDom.findByLabelText(/email/i), 'ana@example.com');
+            await user.type(await screenDom.findByLabelText(/contraseña/i), 'password123');
+            await user.click(await screenDom.findByRole('button', { name: /entrar/i }));
+            await user.click(await screenDom.findByRole('link', { name: /cerrar sesión/i }));
+            twd.should(await screenDom.findByRole('heading', { name: /iniciar sesión/i }), 'be.visible');
+            await twd.visit('#/profile');
+            twd.should(await screenDom.findByRole('heading', { name: /iniciar sesión/i }), 'be.visible');
+          });
+        });
+      },
+    },
+    { open: false, serviceWorker: false, search: true, pace: true },
+  );
+</script>
+</body>
+</html>
