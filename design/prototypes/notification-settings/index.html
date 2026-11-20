@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Notification settings — Prototype</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.4"></script>
+<style type="text/tailwindcss">
+  @theme {
+    --color-primary: #2563eb;
+    --color-primary-hover: #1d4ed8;
+    --color-danger: #dc2626;
+    --color-success: #15803d;
+    --radius-card: 0.5rem;
+  }
+  [x-cloak] { display: none !important; }
+</style>
+</head>
+<body class="min-h-screen bg-gray-50 text-gray-900 antialiased">
+
+<script>
+  // PROTOTYPE ONLY: scaffolding so this file works standalone (Slack preview or a browser tab).
+  // Not part of the design; do not port. Real routes and endpoints are in the DEV comments.
+
+  // Slack's preview sandbox blocks form submission. This re-dispatches it as a plain `submit`
+  // event (after native validation) so the forms below work there too.
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[type=submit], button:not([type]), input[type=submit]');
+    const form = btn && btn.form;
+    if (!form) return;
+    e.preventDefault();
+    if (!form.noValidate && !form.reportValidity()) return;
+    form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true, submitter: btn }));
+  }, true);
+
+  // PROTOTYPE: fake data · DEV: notification prefs come from GET /api/me/notification-preferences
+  const initialState = () => ({
+    // One row per notification event; email/push are the per-channel opt-ins
+    events: [
+      { id: 'comment', name: 'Comments', description: 'Someone comments on your work', email: true, push: true },
+      { id: 'mention', name: 'Mentions', description: 'Someone mentions you', email: true, push: true },
+      { id: 'assignment', name: 'Assignments', description: 'A task is assigned to you', email: true, push: false },
+      { id: 'digest', name: 'Weekly digest', description: 'Summary of activity in your projects', email: true, push: false },
+      { id: 'product', name: 'Product updates', description: 'News about features and releases', email: false, push: false },
+    ],
+    saved: false,
+    dirty: false,
+  });
+
+  const ROUTES = ['settings'];
+  const parseRoute = () => {
+    const name = location.hash.replace('#/', '');
+    return ROUTES.includes(name) ? name : 'settings';
+  };
+
+  document.addEventListener('alpine:init', () => {
+    Alpine.data('app', () => ({
+      ...initialState(),
+      route: 'settings',
+
+      init() {
+        window.__app = this;
+        const go = () => this.navigate(parseRoute());
+        addEventListener('hashchange', go);
+        addEventListener('popstate', go); // twd.visit('#/route') uses pushState + popstate
+        go();
+      },
+
+      // Hash router. Only the current screen is in the DOM (x-if).
+      navigate(name) {
+        if (location.hash !== `#/${name}`) history.replaceState(null, '', `#/${name}`);
+        this.route = name;
+      },
+
+      toggle(eventId, channel) {
+        const ev = this.events.find((e) => e.id === eventId);
+        ev[channel] = !ev[channel];
+        this.dirty = true;
+        this.saved = false;
+      },
+
+      // "All email" / "All push" master toggles
+      setAll(channel, value) {
+        this.events.forEach((e) => { e[channel] = value; });
+        this.dirty = true;
+        this.saved = false;
+      },
+
+      save() {
+        // DEV (proposed): PUT /api/me/notification-preferences
+        //   { preferences: [{ eventId, email, push }] } → 200
+        this.saved = true;
+        this.dirty = false;
+      },
+    }));
+  });
+
+  // Scenarios await this in beforeEach so every scenario starts from the same state.
+  async function resetApp() {
+    const app = window.__app;
+    Object.assign(app, initialState());
+    app.route = '';
+    await Alpine.nextTick();
+    history.replaceState(null, '', '#/settings');
+    app.navigate('settings');
+    await Alpine.nextTick();
+  }
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.17.5/dist/cdn.min.js"></script>
+
+<div x-data="app" x-cloak>
+  <header class="sticky top-0 z-10 border-b border-gray-200 bg-white/80 backdrop-blur">
+    <div class="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
+      <span class="text-xl font-semibold">Settings</span>
+    </div>
+  </header>
+
+  <main id="app" class="mx-auto max-w-3xl px-4 py-10 pb-16">
+
+    <!-- DEV: route /settings/notifications · requires session, else redirect to /login -->
+    <template x-if="route === 'settings'">
+      <section>
+        <h1 class="mb-2 text-3xl font-bold">Notification settings</h1>
+        <p class="mb-8 text-gray-600">Choose how you want to be notified for each event.</p>
+
+        <!-- Master toggles row -->
+        <div class="mb-4 flex items-center justify-between rounded-card bg-gray-100 px-4 py-3 text-sm font-medium">
+          <span>Turn on all</span>
+          <div class="flex gap-6">
+            <button type="button" class="text-primary hover:underline"
+                    aria-label="Turn on email for all events" @click="setAll('email', true)">All email</button>
+            <button type="button" class="text-primary hover:underline"
+                    aria-label="Turn on push for all events" @click="setAll('push', true)">All push</button>
+          </div>
+        </div>
+
+        <!-- Column headers -->
+        <div class="mb-2 hidden grid-cols-[1fr_5rem_5rem] gap-2 px-4 text-xs font-semibold uppercase tracking-wide text-gray-500 sm:grid">
+          <span>Event</span>
+          <span class="text-center">Email</span>
+          <span class="text-center">Push</span>
+        </div>
+
+        <!-- DEV (proposed): GET /api/me/notification-preferences → [{ eventId, email, push }] -->
+        <ul class="flex flex-col gap-3">
+          <template x-for="event in events" :key="event.id">
+            <li class="grid grid-cols-[1fr_5rem_5rem] items-center gap-2 rounded-card bg-white p-4 shadow-md">
+              <div>
+                <h2 class="font-semibold" x-text="event.name"></h2>
+                <p class="text-sm text-gray-500" x-text="event.description"></p>
+              </div>
+              <div class="flex justify-center">
+                <button type="button" role="switch"
+                        class="relative h-6 w-11 rounded-full transition-colors"
+                        :class="event.email ? 'bg-primary' : 'bg-gray-300'"
+                        :aria-checked="event.email"
+                        :aria-label="`Email notifications for ${event.name}`"
+                        @click="toggle(event.id, 'email')">
+                  <span class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform"
+                        :class="event.email && 'translate-x-5'"></span>
+                </button>
+              </div>
+              <div class="flex justify-center">
+                <button type="button" role="switch"
+                        class="relative h-6 w-11 rounded-full transition-colors"
+                        :class="event.push ? 'bg-primary' : 'bg-gray-300'"
+                        :aria-checked="event.push"
+                        :aria-label="`Push notifications for ${event.name}`"
+                        @click="toggle(event.id, 'push')">
+                  <span class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform"
+                        :class="event.push && 'translate-x-5'"></span>
+                </button>
+              </div>
+            </li>
+          </template>
+        </ul>
+
+        <!-- Save -->
+        <div class="mt-8 flex items-center gap-4">
+          <button type="button" class="rounded-card bg-primary px-4 py-2 font-semibold text-white hover:bg-primary-hover"
+                  @click="save()">Save changes</button>
+          <!-- DEV (proposed): PUT /api/me/notification-preferences { preferences: [{ eventId, email, push }] } → 200 -->
+          <p role="status" class="text-sm font-medium text-success" x-show="saved">Preferences saved</p>
+          <p class="text-sm text-gray-500" x-show="dirty && !saved">You have unsaved changes</p>
+        </div>
+      </section>
+    </template>
+  </main>
+
+  <!-- PROTOTYPE ONLY: screen switcher for reviewers -->
+  <nav aria-label="Prototype screens"
+       class="fixed inset-x-0 bottom-0 flex items-center justify-center gap-4 bg-[#123956] px-4 py-2 text-sm text-gray-200">
+    <a href="#/settings" class="hover:text-white">Notification settings</a>
+    <span class="ml-auto hidden text-xs text-[#9fd8da] sm:inline">
+      Prototype · tests by <a href="https://twd.dev" target="_blank" rel="noopener" class="underline hover:text-white">TWD</a>
+    </span>
+  </nav>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/twd-js@1.13.0/dist/twd.global.js"></script>
+<script>
+  sessionStorage.setItem('twd-pace', sessionStorage.getItem('twd-pace') || '600');
+  const { initTWD, describe, it, beforeEach, twd, userEvent, screenDom, expect } = window.TWD;
+
+  initTWD(
+    {
+      scenarios: async () => {
+        describe('Notification settings', () => {
+          beforeEach(() => resetApp());
+
+          it('shows each event with its current email and push state', async () => {
+            const email = await screenDom.findByRole('switch', { name: 'Email notifications for Assignments' });
+            twd.should(email, 'be.checked');
+            const push = await screenDom.findByRole('switch', { name: 'Push notifications for Assignments' });
+            twd.should(push, 'have.attr', 'aria-checked', 'false');
+            twd.should(await screenDom.findByRole('switch', { name: 'Push notifications for Comments' }), 'be.checked');
+          });
+
+          it('toggles a single channel and marks unsaved changes', async () => {
+            const user = userEvent.setup();
+            const push = await screenDom.findByRole('switch', { name: 'Push notifications for Assignments' });
+            twd.should(push, 'have.attr', 'aria-checked', 'false');
+            await user.click(push);
+            twd.should(await screenDom.findByRole('switch', { name: 'Push notifications for Assignments' }), 'be.checked');
+            twd.should(await screenDom.findByText('You have unsaved changes'), 'be.visible');
+          });
+
+          it('saves the preferences', async () => {
+            const user = userEvent.setup();
+            await user.click(await screenDom.findByRole('switch', { name: 'Email notifications for Product updates' }));
+            await user.click(await screenDom.findByRole('button', { name: 'Save changes' }));
+            twd.should(await screenDom.findByRole('status'), 'have.text', 'Preferences saved');
+            expect(screenDom.queryByText('You have unsaved changes')).to.equal(null);
+          });
+
+          it('turns on email for every event with the master toggle', async () => {
+            const user = userEvent.setup();
+            await user.click(await screenDom.findByRole('button', { name: 'Turn on email for all events' }));
+            for (const name of ['Comments', 'Mentions', 'Product updates']) {
+              twd.should(await screenDom.findByRole('switch', { name: `Email notifications for ${name}` }), 'be.checked');
+            }
+            twd.should(await screenDom.findByText('You have unsaved changes'), 'be.visible');
+          });
+        });
+      },
+    },
+    { open: false, serviceWorker: false, search: true, pace: true },
+  );
+</script>
+</body>
+</html>
